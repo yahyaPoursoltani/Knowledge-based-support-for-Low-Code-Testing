@@ -1,0 +1,58 @@
+# Empirical datasets
+Dataset/
+
+# Local research library contents (reference material, not source)
+Study Resources/Books/
+Study Resources/ResearchPapers/
+Study Resources/PhD Proposal Docs/
+
+# Archives and large binary research files
+*.pdf
+*.zip
+*.rar
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# LaTeX
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.tdo
+*.nav
+*.snm
+*.vrb
+*.xdv
+
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
