@@ -1,6 +1,6 @@
 # ADR-0007: Analysis scope with a process-level default, not single-model isolation
 
-- **Status:** Accepted (amends ADR-0002)
+- **Status:** Accepted (amends ADR-0002; V0 narrowed by ADR-0013: one target process revision per scope)
 - **Date:** 2026-10-26
 - **Scope:** Knowledge-Based Validation Service (thesis implementation)
 

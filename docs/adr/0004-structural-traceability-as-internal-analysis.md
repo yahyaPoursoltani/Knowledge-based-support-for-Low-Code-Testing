@@ -1,18 +1,18 @@
 # ADR-0004: Structural traceability is internal analysis, not a coverage deliverable
 
-- **Status:** Accepted
+- **Status:** Accepted (gap taxonomy staged and renamed in ADR-0012; "semantic validation gap" is now "Semantic Validation Insufficiency", applicable only after representation and traceability)
 - **Date:** 2026-10-26
 - **Scope:** Knowledge-Based Validation Service (thesis implementation)
 
 ## Context
 
-The thesis problem is that testing an implementation against a model does not establish that the model expresses stakeholder expectations. Distinguishing that from ordinary coverage requires comparing three different situations:
+The thesis problem is that testing an implementation against a model does not establish that the model expresses stakeholder expectations. Distinguishing that from ordinary coverage requires distinguishing three ordered failure conditions:
 
-1. a behavioral requirement/scenario is not represented in the process model;
-2. it is represented but lacks structural traceability to tests;
-3. it is represented and structurally covered, yet still lacks sufficient semantic validation evidence.
+1. behavior expressed by the supplied behavioral specification is not represented in the process model;
+2. it is represented but lacks structural traceability to supplied tests;
+3. it is represented and structurally traced, yet still lacks sufficient semantic validation evidence.
 
-Situation 3 is the core of the research. Excluding coverage and traceability entirely would make situations 1–3 indistinguishable and would collapse the analysis back into conventional coverage thinking. Building a coverage management/reporting capability would instead make coverage the deliverable and shift effort away from semantic validation.
+The third condition is the core of the research. Excluding coverage and traceability entirely would make situations 1–3 indistinguishable and would collapse the analysis back into conventional coverage thinking. Building a coverage management/reporting capability would instead make coverage the deliverable and shift effort away from semantic validation.
 
 ## Decision
 

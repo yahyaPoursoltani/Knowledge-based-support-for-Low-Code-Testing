@@ -6,12 +6,13 @@ Implementation prototype of a PhD thesis. This repository holds the thesis resea
 
 Model-based and low-code testing can produce tests that provide evidence that an implementation conforms to its conceptual/process model, while still failing to establish that the conceptual model correctly represents stakeholder and domain expectations.
 
-Two concerns must not be conflated:
+Three concerns must not be conflated:
 
-- **testing the implementation against the model** — does the running system behave as the process model prescribes?
-- **validating model/system behavior against behavioral requirements** — does the modeled behavior express what stakeholders actually require?
+- **model-based testing** — does the implementation behave as the process model prescribes? (context, not the service's analytical claim);
+- **Verification (thesis-specific)** — is the BPMN model itself technically/structurally sound (deadlocks, control flow, exception handling, service wiring)? Out of scope;
+- **Validation** — do the available Test Cases and evidence provide sufficient evidence to validate the expected behavior expressed by the supplied Scenarios, given its representation in the target BPMN model? This is the thesis concern.
 
-This thesis investigates the second concern. It does **not** claim that the problem is already empirically solved.
+This thesis investigates the third concern. Findings are relative to the supplied Scenarios and available evidence, not absolute stakeholder correctness. The thesis does **not** claim that the problem is already empirically solved.
 
 ## System boundary
 
@@ -94,16 +95,20 @@ Explicitly out of scope:
 - operating, deploying, or administering the external Camunda-based subsystem;
 - defining stakeholder requirements on behalf of stakeholders;
 - independently declaring a BPMN process model absolutely "business-correct";
+- verifying the technical/structural correctness of the BPMN model itself (deadlocks, control flow, exception handling, service/dependency wiring) — that is Verification, not Validation;
 - generating the empirical ground truth used to evaluate the thesis method;
 - acting as an autonomous substitute for stakeholder/domain-expert judgment when artifacts and evidence are insufficient.
 
-Structural coverage and traceability are **not** excluded as analysis. The research must distinguish:
+Structural coverage and traceability are **not** excluded as analysis. The research uses a staged validation-failure taxonomy (details in `CONTEXT.md`):
 
-1. a behavioral requirement/scenario **not represented** in the process model;
-2. a represented requirement/scenario **lacking structural traceability** to tests;
-3. a represented and structurally covered requirement/scenario **still lacking sufficient semantic validation evidence**.
+1. behavior specified but **not represented** in the process model -> Representation Gap (branch stops);
+2. represented but **not structurally traced** to tests -> Traceability Gap (branch stops);
+3. represented and structurally traced but **insufficient semantic validation evidence** -> Semantic Validation Insufficiency (the MBTT condition; branch stops);
+4. sufficient evidence -> Validated relative to the supplied behavioral specification, declared artifact state, available Test Cases/evidence, and Analysis Scope.
 
-The service may compute and expose structural coverage/traceability information when it is needed for Scenario–Test assessment, gap classification, evidence analysis, or explanation. It must not become a general-purpose coverage management/reporting subsystem, and conventional coverage metrics are not the primary thesis deliverable. It may assess whether BPMN behavior, scenarios, tests, and evidence are mutually supportive or inconsistent, but it must not claim absolute business correctness from the BPMN model alone.
+Structural traceability/coverage is a model-grounded signal; it is **not** semantic validation evidence by itself.
+
+The service may compute and expose structural coverage/traceability information when it is needed for Scenario–Test assessment, gap classification, evidence analysis, or explanation. It must not become a general-purpose coverage management/reporting subsystem, and conventional coverage metrics are not the primary thesis deliverable. It may assess whether BPMN behavior, scenarios, tests, and evidence are mutually supportive or inconsistent, but it must not claim absolute business correctness from the BPMN model alone, and it does not adjudicate which artifact is "wrong".
 
 ## Failure and deficiency levels
 
@@ -137,12 +142,14 @@ The analysis unit is modeled as an **Analysis Scope**, not as a permanently isol
 
 An Analysis Scope may contain:
 
-- one root process;
+- one target process at one declared authoritative revision;
 - its explicitly supplied contained/subordinate process structures;
-- explicitly supplied called/reused processes required for the intended analysis;
+- explicitly supplied called/reused supporting processes required for the intended analysis;
 - the scenario set declared for that scope;
 - the test case set declared for that scope;
 - associated evidence.
+
+V0 analyzes a single target process revision per scope; it does not compare alternative BPMN representations or multiple revisions of that target within one scope. Sub-processes, Call Activities, and supplied called processes remain in scope.
 
 **Ownership is not participation.** A scenario owned by P1 may be validated by a test owned by P2 when both are in the same scope. For example, with root P1 and scope {P1, P2}, scenarios S1/S2 owned by P1, and tests T1 (owned by P1) and T2 (owned by P2), the service may determine that T2 contributes evidence to S1.
 
