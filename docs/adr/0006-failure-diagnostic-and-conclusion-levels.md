@@ -1,6 +1,6 @@
 # ADR-0006: Separate request failure, input diagnostics, and research conclusions
 
-- **Status:** Accepted
+- **Status:** Accepted (execution/transport outcomes clarified by ADR-0008: execution failure is distinct from artifact-level deficiency)
 - **Date:** 2026-10-26
 - **Scope:** Knowledge-Based Validation Service (thesis implementation)
 
@@ -16,7 +16,7 @@ Additionally, a scenario referenced by a test but not supplied does **not** prov
 
 The service distinguishes three levels.
 
-**1. Request-level fatal failure** — aborts the analysis only when the request is structurally unusable: invalid envelope; unidentifiable analysis unit; missing required artifact identity/revision; missing required BPMN input; or BPMN so unreadable that process knowledge cannot be constructed. Such failures are explicit and never silently normalized.
+**1. Request-level fatal failure** — aborts the analysis only when the request is structurally unusable: invalid envelope; unidentifiable analysis unit; missing required identity/revision metadata needed to establish the analysis-unit artifact state; missing required BPMN input; or BPMN so unreadable that process knowledge cannot be constructed. Missing metadata for optional or nonessential evidence is an artifact-level diagnostic, not automatically fatal. Such failures are explicit and never silently normalized.
 
 **2. Artifact-level / analysis-level deficiency** — when individual artifacts are incomplete, inconsistent, missing evidence, or locally unparseable, the service continues with the analyzable parts and reports the deficiency with provenance, plus the limitations it imposes on conclusions. Missing execution evidence is not fatal: the assessment stays unresolved rather than becoming validation or invalidation.
 

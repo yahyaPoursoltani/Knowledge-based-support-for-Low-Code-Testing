@@ -1,6 +1,6 @@
 # ADR-0002: On-demand, model-scoped analysis requests
 
-- **Status:** Accepted
+- **Status:** Accepted (amended by ADR-0007: the analysis unit is an Analysis Scope with a process-level default; single-model isolation does not apply)
 - **Date:** 2026-10-26
 - **Scope:** Knowledge-Based Validation Service (thesis implementation)
 

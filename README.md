@@ -109,7 +109,7 @@ The service may compute and expose structural coverage/traceability information 
 
 The service distinguishes three levels; they must not be collapsed.
 
-**1. Request-level fatal failure.** The whole analysis fails only when the request is structurally unusable: invalid envelope; unidentifiable analysis unit; missing artifact identity/revision information; missing required BPMN input; or a BPMN representation so unreadable that process knowledge cannot be constructed. These failures are explicit and are never silently normalized.
+**1. Request-level fatal failure.** The whole analysis fails only when the request is structurally unusable: invalid envelope; unidentifiable analysis unit; missing required identity/revision metadata needed to establish the analysis-unit artifact state; missing required BPMN input; or a BPMN representation so unreadable that process knowledge cannot be constructed. Missing metadata for optional or nonessential evidence is an artifact-level diagnostic, not automatically fatal. These failures are explicit and are never silently normalized.
 
 **2. Artifact-level or analysis-level deficiency.** When individual artifacts are incomplete, inconsistent, missing evidence, or locally unparseable, the service continues with what remains analyzable and returns partial results plus explicit artifact-level failures and the limitations they impose. Example: one unparseable scenario still yields results for the valid scenarios, an explicit failure for that scenario, and stated limits on conclusions. Missing execution evidence is not fatal; it leaves an assessment unresolved rather than validating or invalidating it.
 
@@ -117,17 +117,43 @@ The service distinguishes three levels; they must not be collapsed.
 
 Rules: analyze usable information best-effort; preserve provenance of deficiencies; expose unresolved references explicitly; return partial or unresolved conclusions where necessary; never invent missing information; never silently normalize inconsistencies; never treat absence of evidence as evidence of absence; never automatically map every input inconsistency to a gap.
 
-## Operational mode and analysis unit
+## Transport and outcome classes
+
+V0 uses **synchronous request/response**: the subsystem sends one analysis request, the service completes the analysis, and the same interaction returns one structured result. No asynchronous job creation, polling, callbacks, or job-state management are introduced unless empirical performance later shows synchronous execution is impractical. Asynchronous transport may later be added as a separate adapter around the same analysis core.
+
+Three outcome classes are distinct:
+
+1. **Input Failure** — the request is structurally unusable (request-level fatal failure, see above). Explicit; nothing is analyzed.
+2. **Completed Analysis** — the analysis finished over the usable supplied artifacts. The result may legitimately contain unresolved, partial, or insufficient-evidence conclusions caused by artifact/evidence incompleteness (e.g. missing execution evidence for one test case).
+3. **Execution Failure** — the request was valid, but the analysis did not complete because of an operational limit (timeout, cancellation, resource exhaustion, other cutoff). No incomplete semantic result may be presented as a validation conclusion; the service returns an explicit execution/operational failure.
+
+Artifact/evidence incompleteness and analysis-execution incompleteness therefore have different semantics and must never be conflated. Error codes, HTTP statuses, and concrete timeout values are not defined yet; the execution limit remains an operational configuration concern.
+
+## Operational mode and analysis scope
 
 The service is **on-demand**: the external subsystem decides when an analysis is required, sends **one analysis request**, and receives **one structured, explainable analysis result**. The initial prototype does not poll, re-analyze in the background, or synchronize event-driven.
 
-The **analysis unit** is one BPMN process model together with:
+The analysis unit is modeled as an **Analysis Scope**, not as a permanently isolated BPMN artifact. Prototype V0 uses a **process-level default**: behavioral scenarios are defined at the process level, test cases are defined at the process level, and each scenario and test case has one declared owning process. A process may nevertheless contain sub-processes or invoke reusable processes, so a higher-level scenario may be realized across contained or called processes.
 
-- all behavioral scenarios associated with that model;
-- all existing test cases associated with that model;
-- any available test/execution evidence for those test cases.
+An Analysis Scope may contain:
 
-The unit is model-scoped rather than scenario-scoped because the analysis integrates BPMN, Scenario, and Test knowledge into a shared UKG, and because a single scenario may be validated by one test case or by a combination of test cases.
+- one root process;
+- its explicitly supplied contained/subordinate process structures;
+- explicitly supplied called/reused processes required for the intended analysis;
+- the scenario set declared for that scope;
+- the test case set declared for that scope;
+- associated evidence.
+
+**Ownership is not participation.** A scenario owned by P1 may be validated by a test owned by P2 when both are in the same scope. For example, with root P1 and scope {P1, P2}, scenarios S1/S2 owned by P1, and tests T1 (owned by P1) and T2 (owned by P2), the service may determine that T2 contributes evidence to S1.
+
+**Declared scope membership is authoritative.** The external subsystem declares it. The service must not silently expand scope by inferring additional process, scenario, or test membership from names, tags, semantic similarity, graph connectivity, or embedded references. It may inspect supplied artifact relationships and report missing dependencies as diagnostics — e.g. a Call Activity from P1 to P3 where P3 is not supplied is reported, not fetched or added.
+
+- declared scope membership -> authoritative;
+- relationships inside that scope -> may be inferred by the service;
+- references outside that scope -> diagnostics;
+- silent scope expansion -> prohibited.
+
+**Extensibility constraint.** The analysis core must not hard-code a permanent single-process assumption. The design must remain open to reusable scenarios and test cases across processes, composite multi-process analysis, and application-level analysis composed of several processes. Appropriate abstractions (e.g. substitutable Analysis Scope implementations, OCP/DIP) are to be designed later; they are not designed in this document.
 
 This operational boundary is distinct from the **research evaluation workflow**: a separate evaluation harness invokes the same analysis core repeatedly over a research dataset (e.g. BPMN-for-Research). Offline evaluation is **not** a second external operational mode of the service.
 
@@ -177,7 +203,7 @@ The graph database, persistence technology, versioning approach, and update stra
 
 ## UKG versioning
 
-The persistent UKG is a **versioned representation of an analysis unit's artifact state**, not one continuously mutated graph in which knowledge from different revisions may mix.
+The persistent UKG is a **versioned representation of an analysis scope's artifact state**, not one continuously mutated graph in which knowledge from different revisions may mix.
 
 ```text
 BPMN revision A + Scenario-set revision B + Test-set revision C + evidence revisions
@@ -192,6 +218,71 @@ BPMN revision A + Scenario-set revision B + Test-set revision C + evidence revis
 These are distinct concepts: **Artifact Version ≠ UKG Version ≠ Analysis Run / Analysis Result** (e.g. BPMN r7 + Scenario-set r12 + Test-set r20 -> UKG v31 -> run 108; a later run may reuse UKG v31).
 
 Not yet decided: physical snapshot vs delta storage; graph-database versioning mechanism; retention/deletion of historical versions; whether artifact-specific KGs are versioned/persisted independently; whether new UKG construction is physically full or incremental; analysis-result caching.
+
+## Identity and versioning responsibilities
+
+Identifier ownership follows ownership of the concept.
+
+**The external subsystem owns external identity** and supplies, authoritatively:
+
+- Analysis Scope identifier;
+- process identifiers;
+- scenario identifiers;
+- test case identifiers;
+- artifact revision/version identifiers;
+- identifiers for externally owned evidence where applicable.
+
+The service preserves and echoes these identifiers; it does not mint replacements for externally owned artifacts.
+
+**The thesis service owns internal analysis identity** and mints:
+
+- UKG version identifiers;
+- analysis run identifiers.
+
+Every analysis result is traceable across both identity domains:
+
+```text
+external scope/artifact identities + revisions
+  -> UKG version -> analysis run -> analysis result
+```
+
+Example: scope S, process P r5, scenario SC-12 r3, test TC-41 r8 -> UKG v31 -> run 108; the result preserves all references.
+
+Keep distinct: **Request/Correlation Identifier ≠ Analysis Run Identifier ≠ UKG Version Identifier**. A transport-level request/correlation identifier supplied by the subsystem may be echoed but is not the analysis run id. A future internal content fingerprint may support deduplication or reproducibility but must never replace subsystem-owned artifact identity. Identifier formats, UUID schemes, database keys, and hash algorithms are not defined.
+
+## Concurrency, retry, and determinism
+
+Repeated and concurrent requests for the same declared scope and the same artifact revisions are allowed. **Each accepted request produces its own Analysis Run**; a compatible persisted UKG version may be reused across those runs, but a UKG version is not a run.
+
+```text
+UKG v31 -> run 101
+        -> run 102
+        -> run 103
+```
+
+V0 does **not** promise: duplicate-request suppression, per-scope serialization, ordering between concurrent runs, locking semantics, exactly-once execution, or exact replay of a previous run. The operation is therefore not described as strictly idempotent: the service has internal persistent state (UKG versions, run identities), and a retry after a lost response may create a new run.
+
+Retries are nonetheless operationally acceptable because the analysis request itself does not mutate BPMN models, scenarios, test cases, or external Scenario–Test links. If exact retry deduplication is later needed, a request/idempotency key is a separate contract decision.
+
+No deterministic analytical output is promised yet. The reasoning mechanism is unselected; probabilistic components (e.g. an LLM) could make two runs over the same UKG differ. What is required is traceability and reproducibility of the **analysis context** — artifact identities/revisions, UKG version, run — not byte-identical output.
+
+## Analysis result persistence
+
+Completed Analysis Results are **first-class persistent research state** of the thesis service. Each completed run has an immutable, run-addressable result linked to the exact context that produced it:
+
+```text
+artifact identities + revisions -> UKG version -> analysis run -> immutable result
+```
+
+A persisted result is traceable to the Analysis Scope; the relevant process, scenario, test case, and evidence identities; their revisions; the UKG version; and the analysis run.
+
+**Analysis Result ≠ external Scenario–Test validation link.** The service owns the history of analytical results; the external subsystem continues to own user-facing link persistence, presentation, and any externally managed link lifecycle. Retaining results does not transfer link ownership.
+
+Completed results are never overwritten. A later run over changed artifacts, a new UKG version, or a changed analysis method produces a new result; earlier results remain intact.
+
+A completed result may contain supported, contradicted, unresolved, or insufficient-evidence conclusions plus artifact-level diagnostics, and is persisted. A run that fails (timeout, cancellation, resource exhaustion, other cutoff) keeps only run/failure metadata; no incomplete semantic result is persisted or presented as valid.
+
+Not yet decided: physical result storage, retention duration, deletion/archival, compression, whether intermediate reasoning artifacts (prompts, raw LLM responses, queries, embeddings, logs) are persisted, and result caching/reuse.
 
 ## Primary analytical goal
 

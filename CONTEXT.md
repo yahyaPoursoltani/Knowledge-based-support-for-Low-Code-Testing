@@ -28,15 +28,19 @@ A knowledge representation extracted from existing test cases and available asso
 
 The integrated knowledge representation combining knowledge from the BPMN, Scenario, and Test domains while preserving provenance.
 
-The UKG is **persistent and versioned**: a UKG version represents one analysis-unit artifact state. A change in any relevant artifact revision produces a new UKG version; the previous version remains distinguishable. The UKG is not semantically a continuously mutated graph — incremental construction is only an implementation optimization. Persistence technology and physical schema are not yet selected, and whether the artifact-specific graphs are persisted independently is undecided (see `docs/adr/0001-persist-the-unified-knowledge-graph.md` and `docs/adr/0005-version-the-ukg-per-artifact-state.md`).
+The UKG is **persistent and versioned**: a UKG version represents one analysis-scope artifact state. A change in any relevant artifact revision produces a new UKG version; the previous version remains distinguishable. The UKG is not semantically a continuously mutated graph — incremental construction is only an implementation optimization. Persistence technology and physical schema are not yet selected, and whether the artifact-specific graphs are persisted independently is undecided (see `docs/adr/0001-persist-the-unified-knowledge-graph.md` and `docs/adr/0005-version-the-ukg-per-artifact-state.md`).
 
 ## Artifact Version
 
 The identity/revision of a supplied source artifact (BPMN model, scenario set, test set, evidence) as supplied by the external subsystem. Distinct from a UKG version.
 
+## Request/Correlation Identifier
+
+An optional transport-level identifier supplied by the external subsystem for tracing a request. The service may echo it, but it is **not** the Analysis Run identifier.
+
 ## Analysis Run
 
-One execution of the analysis core that produces an Analysis Result. A run is traceable to the artifact versions it consumed and the UKG version it was computed against. Distinct from both artifact versions and the UKG version.
+One execution of the analysis core that produces an Analysis Result. The service mints its identifier. A run is traceable to the artifact versions it consumed and the UKG version it was computed against. Distinct from artifact versions, the UKG version, and any request/correlation identifier.
 
 ## Behavioral Scenario
 
@@ -54,17 +58,27 @@ Do not equate this automatically with semantic validation.
 
 Information that may support or contradict a validation claim. The exact evidence model is not yet defined.
 
-## Analysis Unit
+## Analysis Scope
 
-The scope of one analysis: one BPMN process model, all behavioral scenarios associated with that model, all existing test cases associated with that model, and any available test/execution evidence for those test cases. Model-scoped on purpose: a scenario may be validated by one test case or by a combination of test cases.
+The analysis unit, modeled as a declared scope rather than a permanently isolated BPMN artifact. Prototype V0 defaults to process-level analysis: one root process plus explicitly supplied contained/subordinate process structures and called/reused processes required for the analysis, the scenario set and test case set declared for the scope, and associated evidence. Declared membership is authoritative and is owned by the external subsystem; the service must not silently expand it. The concept must not preclude later composite or application-level scopes.
+
+## Owning Process
+
+The process that a scenario or test case is declared to belong to. Ownership does not determine participation: a test owned by one process may contribute evidence to a scenario owned by another process within the same Analysis Scope.
 
 ## Analysis Request
 
-The single input of an operational analysis, covering one Analysis Unit. The request is **self-contained**: it carries the actual artifacts rather than identifiers to be resolved by fetching. Each artifact also carries stable source identity (see *Artifact Identity*).
+The single input of an operational analysis, covering one Analysis Scope. The request is **self-contained**: it carries the actual artifacts rather than identifiers to be resolved by fetching. Each artifact also carries stable source identity (see *Artifact Identity*).
 
 ## Analysis Result
 
-The single output of an analysis: a structured and explainable assessment of Scenario–Test relationships for the requested Analysis Unit. Conceptually it can express, per behavioral scenario: the relevant test case(s); the relationship assessment; supporting or contradicting evidence; insufficient/unknown evidence; and the explanation. Its exact schema and status vocabulary are not yet defined.
+The single output of an analysis: a structured and explainable assessment of Scenario–Test relationships for the requested Analysis Scope. Conceptually it can express, per behavioral scenario: the relevant test case(s); the relationship assessment; supporting or contradicting evidence; insufficient/unknown evidence; and the explanation.
+
+A completed run's result is persisted immutably and is addressable by its Analysis Run. It is **not** an external Scenario–Test validation link. Its exact schema and status vocabulary are not yet defined.
+
+## External Scenario–Test Link
+
+A user-facing validation link between a behavioral scenario and test case(s) that is persisted, presented, and lifecycle-managed by the external subsystem. It is distinct from the Analysis Result and from the Scenario–Test Relationship assessed by the service.
 
 ## Artifact Identity
 
@@ -84,11 +98,27 @@ Documented structural linkage between behavioral elements/scenarios and tests. S
 
 ## Request-Level Fatal Failure
 
-A failure that aborts the whole analysis because the request is structurally unusable: invalid envelope, unidentifiable analysis unit, missing artifact identity/revision, missing required BPMN input, or BPMN so unreadable that process knowledge cannot be constructed. Always explicit; never silently normalized.
+A failure that aborts the whole analysis because the request is structurally unusable: invalid envelope, unidentifiable analysis unit, missing required identity/revision metadata needed to establish the analysis-unit artifact state, missing required BPMN input, or BPMN so unreadable that process knowledge cannot be constructed. Missing metadata for optional or nonessential evidence is an artifact-level diagnostic, not automatically fatal. Always explicit; never silently normalized.
 
 ## Input Diagnostic
 
 A provenance-aware report that a supplied artifact is incomplete, inconsistent, unresolved, missing required evidence, or locally unparseable. An input diagnostic is **not** a research-level gap by itself; it may reflect an incomplete request package. Diagnostics may limit conclusions, and only evidence-supported interpretations become higher-level findings.
+
+## Input Failure
+
+Another name for a request-level fatal failure: the request is structurally unusable, so nothing is analyzed.
+
+## Completed Analysis
+
+An analysis that finished over the usable supplied artifacts. Its result may still contain unresolved, partial, or insufficient-evidence conclusions caused by artifact/evidence deficiencies; those are legitimate semantic outputs, not failures.
+
+## Execution Failure
+
+A valid request whose analysis did not complete because of an operational limit (timeout, cancellation, resource exhaustion, other cutoff). It is distinct from artifact/evidence incompleteness, and no incomplete semantic result may be presented as a validation conclusion.
+
+## Analysis Reproducibility
+
+Reconstructability of the analysis context: which external artifact identities/revisions, which UKG version, and which analysis run produced a result. It does not imply deterministic or byte-identical analytical output, and it does not imply idempotent retries.
 
 ## Assessed gap situations
 
@@ -123,4 +153,7 @@ The following are deliberately **not** defined yet; do not introduce stabilizing
 - the artifact-identity metadata schema and the status vocabulary;
 - the final naming of the assessed gap situations and the traceability relation semantics;
 - the ground-truth construction and adjudication methodology;
-- UKG physical versioning (snapshot vs delta), retention policy, and analysis-result caching.
+- UKG physical versioning (snapshot vs delta), retention policy, and analysis-result caching;
+- identifier formats, UUID schemes, database keys, and content-hash algorithms;
+- physical analysis-result storage, retention/deletion, and whether intermediate reasoning artifacts are persisted;
+- reusable scenarios/tests across processes, composite multi-process and application-level scope design, and the abstractions (e.g. substitutable Analysis Scope) that will support them.
