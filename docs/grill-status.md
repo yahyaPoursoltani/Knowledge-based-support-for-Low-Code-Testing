@@ -44,4 +44,5 @@ Analysis Scope, Owning Process, Analysis Request, Analysis Result, Artifact Iden
 
 - Commit `06dfdc3` contains the initial documentation baseline; `aefdede` finalized the Scope & System Boundary session. Later documentation changes are uncommitted.
 - Domain Concepts & Ubiquitous Language Grill is also closed; see `docs/domain-concepts-summary.md` and ADR-0012–0015.
+- Prototype Architectural Baseline Grill is closed; see `docs/prototype-architecture-baseline.md` and ADR-0016–0020. No code exists yet.
 - `Dataset/` and research-library binaries are git-ignored; `resource-structure.txt` is intentionally untracked (UTF-16, stale).

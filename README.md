@@ -345,6 +345,7 @@ Communication between the thesis service and the external subsystem occurs throu
 | Path | Purpose |
 | --- | --- |
 | `CONTEXT.md` | Project context and established terminology |
+| `docs/prototype-architecture-baseline.md` | Accepted prototype architecture for the first implementation slice |
 | `AGENTS.md` | Working rules for AI sessions, incl. research/source policy |
 | `docs/adr/` | Accepted architectural decisions |
 | `Study Resources/INDEX.md` | Navigation and authority map for the reference library |
