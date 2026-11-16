@@ -1,15 +1,15 @@
 # AGENTS.md
 
 ## Current state
-- Research-design phase: documentation only. No application source, manifests, lockfiles, or CI yet.
-- Do not assume a language or toolchain. List the directory before proposing commands, and never invent build/test/lint commands.
-- Do not create application code, API endpoints, graph schemas, or framework projects unless the researcher explicitly asks.
-- When tooling is added, replace the "Commands" section below with the real, verified commands and delete this note.
+- Implementation Step 1 is complete: `src/validation_service` skeleton, editable install, Neo4j connectivity adapter, unit + integration tests. No REST API, orchestrator, or vertical slice yet.
+- Follow `docs/prototype-architecture-baseline.md` and ADR-0016–0020. Do not add graph schemas, Cypher, evidence algorithms, or LLM code before the relevant design step.
+- Commands below are verified; use `.venv` and never invent alternatives.
 
 ## Environment gotchas
 - Platform is Windows with PowerShell 5.1. `&&` and `||` are unsupported; chain with `; if ($?) { ... }`.
 - The working path contains a space (`D:\PhD Thesis Solution`) — always quote paths.
-- Git repo exists (initialized on `main`, no commits yet). Keep generated artifacts out of version control via `.gitignore`.
+- Git repo exists on `main` with commits; keep generated artifacts out of version control via `.gitignore`.
+- Neo4j runs through Docker Compose (`neo4j:2026.05-community`, locally cached). The Python code reads `NEO4J_*` from the process environment; `.env` is read by Docker Compose only (no dotenv dependency), so export the same values for tests/PyCharm.
 
 ## Conventions
 - Owner preferences (apply unless the project establishes otherwise):
@@ -65,25 +65,33 @@ Later explicit researcher decisions override earlier implementation assumptions.
 - Do not train, tune, or derive domain definitions from the evaluation dataset unless that is explicitly part of the designed methodology.
 
 ## Commands
-Not defined yet. Fill in once tooling exists, including how to run a single test:
+Verified on Windows/PowerShell 5.1 from the repository root:
 
 ```text
-install:
-run:
-test:
-test (single):
-lint:
-typecheck:
+install:      python -m venv .venv
+              .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+neo4j:        docker compose up -d          # needs NEO4J_PASSWORD in env/.env
+stack:        .\run.bat                     # restarts Neo4j if running + connectivity check
+stack stop:   .\run.bat stop
+run:          not defined yet (no service entrypoint)
+test:         .\.venv\Scripts\python.exe -m pytest -m "not integration"
+test (single): .\.venv\Scripts\python.exe -m pytest tests/unit/test_config.py::test_settings_defaults
+test (ne4j):  .\.venv\Scripts\python.exe -m pytest -m integration
+lint:         .\.venv\Scripts\ruff.exe check .
+typecheck:    not configured (mypy deferred)
 ```
 
+Integration tests require `docker compose up -d` and exported `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`.
+
 ## Structure
-Documentation foundation only (no code yet):
+Python `src/` layout with the accepted modular layers:
 
-- `README.md` — project orientation, research problem, system boundary, open questions.
-- `CONTEXT.md` — established terminology (source-of-truth vocabulary); deferred terms are marked.
-- `docs/adr/` — accepted architectural decisions, numbered (`0001-...`).
-- `Study Resources/` — reference library; navigate via `Study Resources/INDEX.md`, inspect targets only.
-- `Dataset/` — empirical evaluation material (candidate base: `bpmn-for-research-master`); not a design authority.
-- `resource-structure.txt` — stale folder-listing snapshot; verify with a live listing before relying on it.
+- `src/validation_service/` — package root:
+  - `domain/` pure models; `application/` orchestrator + `ports/`; `ingestion/` contracts/normalization; `analysis/` stage placeholders; `infrastructure/` Neo4j + config; `api/` and `cli/` inbound placeholders.
+  - `bootstrap.py` — only composition root; imports infrastructure, never imported by core.
+- `tests/unit/`, `tests/integration/`, `tests/fixtures/`.
+- `data/sample/` — small development fixtures only. `Dataset/` and `Study Resources/` are not package content and must not be scanned by ordinary tests.
+- `pyproject.toml`, `docker-compose.yml`, `.env.example` — project/tooling/Neo4j setup.
+- `docs/adr/`, `docs/prototype-architecture-baseline.md`, `CONTEXT.md`, `README.md` — decisions and terminology.
 
-When code appears, record real entrypoints and package boundaries here.
+No service entrypoint exists yet (no FastAPI app, orchestrator, or vertical slice).

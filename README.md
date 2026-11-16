@@ -351,3 +351,66 @@ Communication between the thesis service and the external subsystem occurs throu
 | `Study Resources/INDEX.md` | Navigation and authority map for the reference library |
 | `Study Resources/` | Reference library (knowledge and design input) |
 | `Dataset/` | Empirical evaluation material (not a design authority) |
+
+## Local development (Step 1)
+
+PowerShell from the repository root:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+Copy-Item .env.example .env
+# Edit .env and set NEO4J_PASSWORD. Docker Compose reads .env automatically.
+
+docker compose up -d
+docker compose ps
+```
+
+The application and tests read Neo4j settings from environment variables
+directly (no dotenv dependency). Export the same values in your shell or in the
+PyCharm run configuration:
+
+```powershell
+$env:NEO4J_URI = "bolt://localhost:7687"
+$env:NEO4J_USER = "neo4j"
+$env:NEO4J_PASSWORD = "<same password as .env>"
+```
+
+Run the checks:
+
+```powershell
+python -m pytest -m "not integration"   # unit tests only
+python -m pytest -m integration         # requires the Docker Neo4j instance
+ruff check .
+```
+
+Neo4j Browser is available at `http://localhost:7474`; Bolt listens on
+`localhost:7687`. Data is kept in the `neo4j_data` Docker volume.
+
+Restart the local stack and verify connectivity (stop first if already running):
+
+```powershell
+.\run.bat        # loads .env, restarts Neo4j, waits for health, runs the connectivity check
+.\run.bat stop   # stops Neo4j
+```
+
+There is no application entrypoint yet; `run.bat` starts the service stack and
+reports that fact. Once `validation_service/__main__.py` exists, the same script
+starts the application after the services are healthy.
+
+**Neo4j password note:** `NEO4J_PASSWORD` is applied only when the data volume is
+first initialized. Changing `.env` later leaves the old password in the volume,
+so the healthcheck/authentication fails. Either keep the original password or
+recreate the volume (this deletes local data):
+
+```powershell
+docker compose down -v
+.\run.bat
+```
+
+PyCharm: open the repository root directly, select `.venv` as the interpreter,
+and do not add a custom `PYTHONPATH`; the editable install makes
+`validation_service` importable. Put the `NEO4J_*` variables in the run
+configuration. `.env`, `.venv/`, and `.idea/` are git-ignored.
